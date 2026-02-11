@@ -1,0 +1,3 @@
+thefuzz[speedup]
+kroger-api
+python-dotenv
