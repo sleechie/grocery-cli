@@ -34,7 +34,7 @@ cp data/catalog.example.json data/catalog.json
 # (Replace with your own catalog data over time)
 
 # Install dependencies
-pip install thefuzz[speedup] kroger-api python-dotenv
+pip install -r requirements.txt
 
 # Authenticate with Kroger (one-time)
 python grocery auth
