@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.kroger_token_*.json
+data/catalog.json
+!data/catalog.example.json
+*.egg-info/
+dist/
+build/
