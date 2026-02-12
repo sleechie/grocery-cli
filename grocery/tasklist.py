@@ -82,6 +82,8 @@ def _fuzzy_find(name: str, items: list[dict]) -> dict | None:
     best = None
     best_score = 0
     for item in items:
+        if not item.get("title"):
+            continue
         score = fuzz.token_set_ratio(name.lower(), item["title"].lower())
         if score > best_score:
             best_score = score
