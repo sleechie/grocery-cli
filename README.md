@@ -37,7 +37,10 @@ cp data/catalog.example.json data/catalog.json
 pip install -r requirements.txt
 
 # Authenticate with Kroger (one-time)
-python grocery auth
+# Authenticate with Kroger (one-time)
+python grocery auth url
+# Open the printed URL, authorize, then:
+python grocery auth exchange "http://localhost:8000/callback?code=YOUR_CODE"
 
 # Use it
 python grocery list add "bananas" "eggs" "bread"
@@ -66,7 +69,9 @@ python grocery cart sync
 | `grocery cart sync` | Push active list items to Kroger cart |
 | `grocery cart sync --dry-run` | Preview sync without pushing |
 | `grocery cart add "item"` | Add item directly to cart |
-| `grocery auth` | Run Kroger OAuth flow |
+| `grocery auth` | Show auth steps |
+| `grocery auth url` | Print OAuth authorization URL |
+| `grocery auth exchange <code>` | Exchange auth code/redirect URL for tokens |
 
 ## How It Works
 
