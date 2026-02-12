@@ -302,7 +302,16 @@ def cmd_catalog_sub(args):
 def cmd_auth(args):
     """Authenticate with Kroger."""
     from . import kroger
-    kroger.authenticate()
+    if args.action == "url":
+        url = kroger.get_auth_url()
+        print(url)
+    elif args.action == "exchange":
+        kroger.exchange_code(args.code)
+    else:
+        # No subcommand — show both steps
+        url = kroger.get_auth_url()
+        print(f"Step 1: Open this URL and authorize:\n\n{url}\n")
+        print("Step 2: Run: grocery auth exchange <CODE_OR_REDIRECT_URL>")
 
 
 def main():
@@ -355,7 +364,11 @@ def main():
     resolve_parser.add_argument("--api", action="store_true", help="Also search Kroger product API")
 
     # auth
-    subparsers.add_parser("auth", help="Authenticate with Kroger")
+    auth_parser = subparsers.add_parser("auth", help="Authenticate with Kroger")
+    auth_sub = auth_parser.add_subparsers(dest="action")
+    auth_sub.add_parser("url", help="Print the OAuth authorization URL")
+    exchange_p = auth_sub.add_parser("exchange", help="Exchange auth code for tokens")
+    exchange_p.add_argument("code", help="Authorization code or full redirect URL")
 
     args = parser.parse_args()
 

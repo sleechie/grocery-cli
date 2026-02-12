@@ -86,25 +86,28 @@ def add_to_cart(items: list[dict]) -> dict:
     return client.cart.add_to_cart(items=cart_items)
 
 
-def authenticate():
-    """Run OAuth PKCE flow for Kroger."""
+def get_auth_url() -> str:
+    """Generate the Kroger OAuth authorization URL."""
+    if KrogerAPI is None:
+        raise RuntimeError("kroger-api not installed. Run: pip install kroger-api")
+    client = KrogerAPI()
+    return client.authorization.get_authorization_url(
+        scope="cart.basic:write product.compact",
+    )
+
+
+def exchange_code(code: str):
+    """Exchange an authorization code (or full redirect URL) for tokens."""
     if KrogerAPI is None:
         raise RuntimeError("kroger-api not installed. Run: pip install kroger-api")
 
-    client = KrogerAPI()
-
-    auth_url = client.authorization.get_authorization_url(
-        scope="cart.basic:write product.compact",
-    )
-    print(f"\nOpen this URL to authorize:\n\n{auth_url}\n")
-    print("After authorizing, you'll be redirected. Paste the full redirect URL or just the authorization code:")
-    code = input("> ").strip()
-
+    # Extract code from full URL if needed
     if "code=" in code:
         from urllib.parse import urlparse, parse_qs
         parsed = urlparse(code)
         code = parse_qs(parsed.query).get("code", [code])[0]
 
+    client = KrogerAPI()
     token_info = client.client.get_token_with_authorization_code(code)
 
     token_file = _token_path()
