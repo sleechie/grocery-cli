@@ -2,7 +2,7 @@
 
 A grocery management CLI that bridges a Google Tasks shopping list with Kroger's cart API. Fuzzy-matches casual item names against a personal purchase history catalog and syncs resolved products to your Kroger cart for pickup.
 
-Built to be operated by an AI assistant (Claude, GPT, etc.) on behalf of a human. See [AGENTS.md](AGENTS.md) for agent setup and [skills/SKILL.md](skills/SKILL.md) for the operational playbook.
+Built to be operated by an AI assistant (Claude, GPT, etc.) on behalf of a human. See [AGENTS.md](AGENTS.md) for agent setup, [skills/SKILL.md](skills/SKILL.md) for the operational playbook, and [docs/catalog-refresh.md](docs/catalog-refresh.md) for keeping your product catalog up to date.
 
 ## Features
 
