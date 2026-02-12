@@ -113,6 +113,14 @@ grocery-cli/
                                               Flag as unresolved
 ```
 
+## Building Your Catalog
+
+Start with the example: `cp data/catalog.example.json data/catalog.json`
+
+The catalog grows organically — every time you confirm a new product during cart sync, add it with `grocery catalog add`. Over time it becomes a personalized database of everything you buy.
+
+For a head start, you can bulk-import your entire Kroger purchase history. See **[Catalog Refresh](docs/catalog-refresh.md)** for the full guide. This uses Kroger's internal browser APIs to extract every product you've ever purchased, with frequency data.
+
 ## For AI Agents
 
 This tool is designed to be operated by an AI assistant, not directly by a human. If you're an agent setting this up:
