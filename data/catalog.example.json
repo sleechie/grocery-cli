@@ -5,13 +5,41 @@
   "totalProducts": 5,
   "resolvedNames": 5,
   "unresolvedUpcs": 0,
-  "dateRange": {"from": "2024-01-01", "to": "2026-01-01"},
+  "dateRange": {
+    "from": "2024-01-01",
+    "to": "2026-01-01"
+  },
   "totalOrders": 10,
   "items": [
-    {"upc": "0000000004011", "name": "Bananas", "purchaseCount": 30, "lastPurchased": "2026-01-01"},
-    {"upc": "0000000004017", "name": "Granny Smith Apple", "purchaseCount": 15, "lastPurchased": "2026-01-01"},
-    {"upc": "0001111008963", "name": "Large White Eggs", "purchaseCount": 10, "lastPurchased": "2026-01-01"},
-    {"upc": "0007313000367", "name": "Whole Grain Bread", "purchaseCount": 8, "lastPurchased": "2025-12-15"},
-    {"upc": "0003338324000", "name": "Fresh Blackberries 6oz", "purchaseCount": 5, "lastPurchased": "2025-12-01"}
+    {
+      "upc": "0000000004011",
+      "name": "Bananas",
+      "purchaseCount": 30,
+      "lastPurchased": "2026-01-01"
+    },
+    {
+      "upc": "0000000004017",
+      "name": "Granny Smith Apple",
+      "purchaseCount": 15,
+      "lastPurchased": "2026-01-01"
+    },
+    {
+      "upc": "0001111008963",
+      "name": "Large White Eggs",
+      "purchaseCount": 10,
+      "lastPurchased": "2026-01-01"
+    },
+    {
+      "upc": "0007313000367",
+      "name": "Whole Grain Bread",
+      "purchaseCount": 8,
+      "lastPurchased": "2025-12-15"
+    },
+    {
+      "upc": "0003338324000",
+      "name": "Fresh Blackberries 6oz",
+      "purchaseCount": 5,
+      "lastPurchased": "2025-12-01"
+    }
   ]
 }

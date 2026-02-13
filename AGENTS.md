@@ -73,7 +73,7 @@ KROGER_REDIRECT_URI=http://localhost:8000/callback
 # Find your store at https://www.kroger.com/stores/search
 # Store ID format: divisionNumber + storeNumber (e.g., 70100123)
 KROGER_STORE_ID=70100123
-KROGER_DIVISION=620
+KROGER_DIVISION=701
 
 # Paths
 CATALOG_PATH=./data/catalog.json
