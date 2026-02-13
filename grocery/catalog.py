@@ -29,6 +29,15 @@ def search(query: str, limit: int = 10) -> list[dict]:
     return results[:limit]
 
 
+def get_by_upc(upc: str) -> dict | None:
+    """Look up a catalog item by exact UPC. Returns item dict or None."""
+    catalog = load_catalog()
+    for item in catalog:
+        if item["upc"] == upc:
+            return item
+    return None
+
+
 def resolve_item(name: str) -> dict | None:
     """Best single match. Returns top result if score >= 70, else None."""
     results = search(name, limit=5)

@@ -15,7 +15,7 @@ def cmd_list(args):
         if not items:
             print("Grocery list is empty.")
             return
-        print(f"🛒 Grocery List ({len(items)} items):\n")
+        print(f"-- Grocery List ({len(items)} items):\n")
         for i, item in enumerate(items, 1):
             title = item.get('title', '(untitled)')
             if not title:
@@ -24,40 +24,51 @@ def cmd_list(args):
         print()
 
     elif args.action == "add":
-        added = tasklist.add_items_sorted(args.items)
+        # Build notes_map from --upc flags if provided
+        notes_map = {}
+        upcs = getattr(args, 'upcs', None) or []
+        for upc_pair in upcs:
+            # Format: "item_name=UPC_CODE"
+            if "=" in upc_pair:
+                item_name, upc_code = upc_pair.split("=", 1)
+                notes_map[item_name] = f"UPC:{upc_code}"
+        
+        added = tasklist.add_items_sorted(args.items, notes_map=notes_map)
         for task in added:
             title = task.get("title", "?")
-            print(f"  ✓ Added: {title}")
+            notes = task.get("notes", "")
+            upc_str = f" [{notes}]" if notes else ""
+            print(f"  + Added: {title}{upc_str}")
         print(f"\n{len(added)} item(s) added.")
 
     elif args.action == "remove":
         try:
             title = tasklist.remove_item(args.item)
-            print(f"  ✓ Removed: {title}")
+            print(f"  + Removed: {title}")
         except ValueError as e:
-            print(f"  ✗ {e}")
+            print(f"  x {e}")
             sys.exit(1)
 
     elif args.action == "check":
         try:
             title = tasklist.check_item(args.item)
-            print(f"  ✓ Checked off: {title}")
+            print(f"  + Checked off: {title}")
         except ValueError as e:
-            print(f"  ✗ {e}")
+            print(f"  x {e}")
             sys.exit(1)
 
     elif args.action == "uncheck":
         try:
             title = tasklist.uncheck_item(args.item)
-            print(f"  ✓ Unchecked: {title}")
+            print(f"  + Unchecked: {title}")
         except ValueError as e:
-            print(f"  ✗ {e}")
+            print(f"  x {e}")
             sys.exit(1)
 
     elif args.action == "clear":
         count = tasklist.clear_completed()
         if count:
-            print(f"  ✓ Cleared {count} completed item(s).")
+            print(f"  + Cleared {count} completed item(s).")
         else:
             print("  No completed items to clear.")
 
@@ -71,7 +82,7 @@ def cmd_search(args):
     if not results:
         print(f"No matches for '{query}'.")
         return
-    print(f"🔍 Results for '{query}':\n")
+    print(f"-- Results for '{query}':\n")
     for item in results:
         score = item.get("_score", 0)
         count = item.get("purchaseCount", 0)
@@ -86,7 +97,7 @@ def cmd_catalog(args):
 
     items = catalog.get_top_items(n=args.n, show_all=args.all)
     label = "Full" if args.all else f"Top {len(items)}"
-    print(f"📦 {label} Catalog ({len(items)} items):\n")
+    print(f"-- {label} Catalog ({len(items)} items):\n")
     for i, item in enumerate(items, 1):
         count = item.get("purchaseCount", 0)
         last = item.get("lastPurchased", "?")
@@ -94,8 +105,25 @@ def cmd_catalog(args):
     print()
 
 
+def _parse_upc_from_notes(notes: str) -> str | None:
+    """Extract UPC from task notes field. Format: 'UPC:0001234567890'."""
+    if not notes:
+        return None
+    for line in notes.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("UPC:"):
+            return line[4:].strip()
+    return None
+
+
 def _resolve_list_items(items):
-    """Resolve list items against catalog and optionally API."""
+    """Resolve list items against catalog and optionally API.
+    
+    Resolution order:
+    1. Check task notes for pre-resolved UPC (set at add time) -> use directly
+    2. Fuzzy match against local catalog (threshold 70+)
+    3. Fallback to Kroger product API
+    """
     from . import catalog
     from . import kroger
 
@@ -106,6 +134,25 @@ def _resolve_list_items(items):
         title = item.get("title", "").strip()
         if not title:
             continue
+        
+        # 1. Check for pre-resolved UPC in notes
+        notes = item.get("notes", "")
+        pinned_upc = _parse_upc_from_notes(notes)
+        if pinned_upc:
+            cat_item = catalog.get_by_upc(pinned_upc)
+            name = cat_item["name"] if cat_item else title
+            resolved.append({
+                "upc": pinned_upc,
+                "name": name,
+                "quantity": 1,
+                "source": "pinned",
+                "score": 100,
+                "purchaseCount": cat_item.get("purchaseCount", 0) if cat_item else 0,
+                "original": title,
+            })
+            continue
+        
+        # 2. Fuzzy match against catalog
         results = catalog.search(title, limit=5)
         if results and results[0]["_score"] >= 70:
             match = results[0]
@@ -119,6 +166,7 @@ def _resolve_list_items(items):
                 "original": title,
             })
         else:
+            # 3. Fallback: search Kroger product API
             try:
                 api_results = kroger.search_products(title, limit=1)
                 if api_results:
@@ -156,32 +204,35 @@ def cmd_cart(args):
         total = len(resolved) + len(unresolved)
 
         if getattr(args, 'dry_run', False):
-            print(f"🛒 Dry Run — {total} items to sync:\n")
+            print(f"-- Dry Run — {total} items to sync:\n")
             for r in resolved:
                 score_str = f"{r['score']}%" if r['score'] is not None else "N/A"
-                if r['source'] == 'catalog':
-                    print(f"  ✓ {r['original']} → {r['name']} (UPC: {r['upc']})")
+                if r['source'] == 'pinned':
+                    print(f"  * {r['original']} -> {r['name']} (UPC: {r['upc']})")
+                    print(f"    Source: pinned (pre-resolved) | Purchased: {r['purchaseCount']}x")
+                elif r['source'] == 'catalog':
+                    print(f"  + {r['original']} -> {r['name']} (UPC: {r['upc']})")
                     print(f"    Score: {score_str} | Source: catalog | Purchased: {r['purchaseCount']}x")
                 else:
-                    print(f"  ⚠ {r['original']} → {r['name']} (UPC: {r['upc']})")
+                    print(f"  ! {r['original']} -> {r['name']} (UPC: {r['upc']})")
                     print(f"    Score: {score_str} | Source: api (not in catalog)")
             for name in unresolved:
-                print(f"  ✗ {name} → No match found")
+                print(f"  x {name} -> No match found")
             print()
             return
 
         if resolved:
-            print(f"🛒 Syncing {len(resolved)} item(s) to Kroger cart...\n")
+            print(f"-- Syncing {len(resolved)} item(s) to Kroger cart...\n")
             for r in resolved:
-                print(f"  ✓ {r['name']} (UPC: {r['upc']})")
+                print(f"  + {r['name']} (UPC: {r['upc']})")
             try:
                 kroger.add_to_cart(resolved)
-                print(f"\n✓ {len(resolved)} item(s) added to cart.")
+                print(f"\n+ {len(resolved)} item(s) added to cart.")
             except Exception as e:
-                print(f"\n✗ Cart sync failed: {e}")
+                print(f"\nx Cart sync failed: {e}")
 
         if unresolved:
-            print(f"\n⚠ Could not resolve {len(unresolved)} item(s):")
+            print(f"\n! Could not resolve {len(unresolved)} item(s):")
             for name in unresolved:
                 print(f"  • {name}")
 
@@ -191,16 +242,16 @@ def cmd_cart(args):
             match = cat_mod.resolve_item(name)
             if match:
                 cart_items.append({"upc": match["upc"], "name": match["name"], "quantity": 1})
-                print(f"  ✓ {match['name']} (UPC: {match['upc']})")
+                print(f"  + {match['name']} (UPC: {match['upc']})")
             else:
-                print(f"  ✗ No catalog match for '{name}'")
+                print(f"  x No catalog match for '{name}'")
 
         if cart_items:
             try:
                 kroger.add_to_cart(cart_items)
-                print(f"\n✓ {len(cart_items)} item(s) added to Kroger cart.")
+                print(f"\n+ {len(cart_items)} item(s) added to Kroger cart.")
             except Exception as e:
-                print(f"\n✗ Cart add failed: {e}")
+                print(f"\nx Cart add failed: {e}")
 
     else:
         print("Usage: grocery cart [sync|add]")
@@ -213,7 +264,7 @@ def cmd_resolve(args):
     query = " ".join(args.query)
     results = catalog.search(query, limit=5)
 
-    print(f"🔍 Resolving '{query}':\n")
+    print(f"-- Resolving '{query}':\n")
     if results:
         print("  Catalog matches:")
         for item in results:
@@ -277,7 +328,7 @@ def cmd_catalog_sub(args):
         if existing:
             old_name = existing["name"]
             existing["name"] = name
-            print(f"  ✓ Updated UPC {upc}: '{old_name}' → '{name}'")
+            print(f"  + Updated UPC {upc}: '{old_name}' -> '{name}'")
         else:
             new_item = {
                 "upc": upc,
@@ -286,7 +337,7 @@ def cmd_catalog_sub(args):
                 "lastPurchased": None,
             }
             data["items"].append(new_item)
-            print(f"  ✓ Added: {name} (UPC: {upc})")
+            print(f"  + Added: {name} (UPC: {upc})")
 
         data["items"].sort(key=lambda x: -x.get("purchaseCount", 0))
 
@@ -324,6 +375,8 @@ def main():
 
     add_p = list_sub.add_parser("add", help="Add items")
     add_p.add_argument("items", nargs="+")
+    add_p.add_argument("--upc", dest="upcs", action="append", metavar="ITEM=UPC",
+                       help="Attach UPC to item: 'Item Name=0001234567890' (repeatable)")
 
     rm_p = list_sub.add_parser("remove", help="Remove an item")
     rm_p.add_argument("item")

@@ -33,17 +33,33 @@ def get_items(include_completed=False) -> list[dict]:
     return [t for t in tasks if t.get("parent") == PARENT]
 
 
-def add_item(title: str, previous_id: str = None) -> dict:
-    """Add an item under the grocery list parent. Returns task dict."""
+def add_item(title: str, previous_id: str = None, notes: str = None) -> dict:
+    """Add an item under the grocery list parent. Returns task dict.
+    
+    Args:
+        title: Item display name
+        previous_id: ID of the sibling task to insert after (for ordering)
+        notes: Optional notes/description (used to store UPC metadata)
+    """
     args = ["add", LIST, "--title", title, "--parent", PARENT]
     if previous_id:
         args += ["--previous", previous_id]
+    if notes:
+        args += ["--notes", notes]
     data = _run_gog(*args)
     return data.get("task", data)
 
 
-def add_items_sorted(titles: list[str]) -> list[dict]:
-    """Add multiple items, inserting each in the correct aisle-order position."""
+def add_items_sorted(titles: list[str], notes_map: dict = None) -> list[dict]:
+    """Add multiple items, inserting each in the correct aisle-order position.
+    
+    Args:
+        titles: List of item titles to add
+        notes_map: Optional dict mapping title -> notes string (e.g. UPC metadata)
+    """
+    if notes_map is None:
+        notes_map = {}
+    
     current = get_items(include_completed=False)
     
     current_indexed = [(t.get("title", ""), get_aisle_index(t.get("title", "")), t["id"]) for t in current if t.get("title")]
@@ -62,7 +78,8 @@ def add_items_sorted(titles: list[str]) -> list[dict]:
             else:
                 break
         
-        task = add_item(title, previous_id=previous_id)
+        notes = notes_map.get(title)
+        task = add_item(title, previous_id=previous_id, notes=notes)
         task_id = task.get("id")
         added.append(task)
         
