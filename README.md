@@ -8,6 +8,7 @@ Built to be operated by an AI assistant (Claude, GPT, etc.) on behalf of a human
 
 - **List management** — Add, remove, check off, and clear items on a Google Tasks shopping list
 - **UPC pinning** — Resolve items to exact Kroger products at add time; pinned UPCs are stored in task notes and skip fuzzy matching during cart sync
+- **Quantity support** — `--qty N` stores quantity in task notes (`QTY:N`); passed through to Kroger cart API
 - **Aisle-sorted insertion** — Items are inserted in store-walk order (Produce → Bakery → Dairy → … → Personal Care)
 - **Product catalog** — Fuzzy match against your purchase history for fast, accurate resolution
 - **Kroger cart sync** — Push your grocery list to a Kroger/City Market cart with one command
@@ -55,6 +56,7 @@ python grocery.py cart sync
 | `grocery list` | Show current grocery list |
 | `grocery list add "item1" "item2"` | Add items (aisle-sorted) |
 | `grocery list add "item" --upc "item=UPC"` | Add item with pinned UPC |
+| `grocery list add "item" --upc "item=UPC" --qty 2` | Add with quantity |
 | `grocery list remove "item"` | Remove item (fuzzy match) |
 | `grocery list check "item"` | Mark item complete |
 | `grocery list uncheck "item"` | Unmark completed item |
