@@ -82,7 +82,7 @@ TOKEN_DIR=.
 
 ### 2. Google Tasks
 
-Your human needs the [`gog` CLI](https://github.com/jychp/gog) installed and authenticated with their Google account.
+Your human needs the [`gog` CLI](https://github.com/steipete/gogcli) installed and authenticated with their Google account.
 
 They need a parent task in Google Tasks called "GROCERY LIST" (or whatever they want). All grocery items are sub-tasks under this parent. Get the IDs:
 

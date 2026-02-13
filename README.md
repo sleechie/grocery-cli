@@ -18,7 +18,7 @@ Built to be operated by an AI assistant (Claude, GPT, etc.) on behalf of a human
 ## Prerequisites
 
 - Python 3.10+
-- [`gog` CLI](https://github.com/jychp/gog) — Google Tasks access (authenticated)
+- [`gog` CLI](https://github.com/steipete/gogcli) — Google Tasks access (authenticated)
 - [Kroger Developer account](https://developer.kroger.com) — Register an app for OAuth credentials
 
 ## Quick Start
