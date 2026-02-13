@@ -9,9 +9,19 @@ The `grocery` CLI manages a grocery list (Google Tasks), product catalog (purcha
 
 ## The Two Phases
 
-### Phase 1: List Building (passive, throughout the week)
+### Phase 1: List Building (resolve-at-add-time)
 
-Your user says things like "add eggs and bread to my grocery list." Run `grocery list add "eggs" "bread"`. No product resolution needed — the list stores their exact words as a human-readable staging area. Items get sorted by grocery store aisle automatically.
+When the user asks to add items, **resolve each item to a specific Kroger product (UPC) at add time** and pin it to the task:
+
+1. Run `grocery resolve "<item>"` (add `--api` if not in catalog) to find the exact product
+2. If multiple matches exist, show options to the user and ask them to pick
+3. Add with the UPC pinned: `grocery list add "Item Name" --upc "Item Name=UPC_CODE"`
+
+The UPC is stored in the Google Tasks notes field as `UPC:0001234567890`. This eliminates ambiguity during cart sync — pinned items skip fuzzy matching entirely.
+
+**For clear, unambiguous items** (e.g., "bananas" with a single 100% catalog match), you can pin the UPC without asking. For anything with multiple possible matches, always ask.
+
+**Exception:** Items added directly by the user in the Google Tasks app won't have a UPC. These fall back to fuzzy matching during cart sync, same as before.
 
 The list is shared — the user's partner, roommate, etc. might also add items directly in Google Tasks. You'll see whatever's there when it's time to sync.
 
@@ -26,11 +36,15 @@ When the user says "sync my cart" or "time to order groceries," this is where th
 ```bash
 grocery list                              # Show current list (active items only)
 grocery list add "bananas" "ham" "eggs"   # Add one or more items (aisle-sorted)
+grocery list add "Broccoli Florets" --upc "Broccoli Florets=0001111079549"  # Add with pinned UPC
+grocery list add "A" "B" --upc "A=UPC1" --upc "B=UPC2"  # Multiple items with UPCs
 grocery list remove "bananas"             # Remove item by name (fuzzy match)
 grocery list check "bananas"              # Mark item as completed
 grocery list uncheck "bananas"            # Unmark a completed item
 grocery list clear                        # Clear ONLY completed items
 ```
+
+The `--upc` flag stores the UPC in the Google Tasks notes field. During cart sync, items with pinned UPCs are used directly — no fuzzy matching needed.
 
 ### Product Catalog
 
@@ -82,13 +96,15 @@ When the user says "sync my cart" or "load my cart," follow this exact sequence:
 ```bash
 grocery cart sync --dry-run
 ```
-Review every item in the output. You're looking for three things:
+Review every item in the output. You're looking for four resolution types:
 
-**✓ Confident matches (catalog, 70%+)** — These are fine. "Ham" → Black Forest Ham, purchased 25 times. No need to confirm.
+**\* Pinned (pre-resolved)** — UPC was set at add time. Exact product, no matching needed. These are always correct.
 
-**⚠ API fallbacks** — The item wasn't in the catalog, so it hit Kroger's search API. The first result might be wrong. Always confirm these with the user before syncing.
+**+ Confident matches (catalog, 70%+)** — Fuzzy-matched against the catalog. Usually fine, but double-check if the score is borderline.
 
-**✗ Unresolved** — Nothing matched. Ask the user what they meant.
+**! API fallbacks** — The item wasn't in the catalog, so it hit Kroger's search API. The first result might be wrong. Always confirm these with the user before syncing.
+
+**x Unresolved** — Nothing matched. Ask the user what they meant.
 
 ### Step 2: Handle Ambiguity
 
