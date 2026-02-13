@@ -9,6 +9,33 @@ LIST = TASK_LIST_ID
 PARENT = PARENT_TASK_ID
 
 
+def parse_notes(notes: str) -> dict:
+    """Extract structured fields from task notes. Returns dict with 'upc' and 'qty'."""
+    result = {"upc": None, "qty": 1}
+    if not notes:
+        return result
+    for line in notes.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("UPC:"):
+            result["upc"] = line[4:].strip()
+        elif line.startswith("QTY:"):
+            try:
+                result["qty"] = int(line[4:].strip())
+            except ValueError:
+                pass
+    return result
+
+
+def build_notes(upc: str = None, qty: int = None) -> str:
+    """Build notes string from UPC and quantity. Omits QTY if 1 or None."""
+    parts = []
+    if upc:
+        parts.append(f"UPC:{upc}")
+    if qty and qty > 1:
+        parts.append(f"QTY:{qty}")
+    return "\n".join(parts) if parts else ""
+
+
 def _run_gog(*args, parse_json=True) -> dict | str:
     """Run a gog tasks command and return parsed output."""
     cmd = ["gog", "tasks"] + list(args)

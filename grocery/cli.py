@@ -20,18 +20,26 @@ def cmd_list(args):
             title = item.get('title', '(untitled)')
             if not title:
                 continue
-            print(f"  {i}. {title}")
+            notes_data = tasklist.parse_notes(item.get("notes", ""))
+            qty_str = f" ({notes_data['qty']}x)" if notes_data["qty"] > 1 else ""
+            print(f"  {i}. {title}{qty_str}")
         print()
 
     elif args.action == "add":
-        # Build notes_map from --upc flags if provided
+        # Build notes_map from --upc and --qty flags
         notes_map = {}
         upcs = getattr(args, 'upcs', None) or []
+        qty = getattr(args, 'qty', 1) or 1
+        upc_map = {}
         for upc_pair in upcs:
-            # Format: "item_name=UPC_CODE"
             if "=" in upc_pair:
                 item_name, upc_code = upc_pair.split("=", 1)
-                notes_map[item_name] = f"UPC:{upc_code}"
+                upc_map[item_name] = upc_code
+        for item_name in args.items:
+            upc = upc_map.get(item_name)
+            notes = tasklist.build_notes(upc=upc, qty=qty)
+            if notes:
+                notes_map[item_name] = notes
         
         added = tasklist.add_items_sorted(args.items, notes_map=notes_map)
         for task in added:
@@ -135,16 +143,19 @@ def _resolve_list_items(items):
         if not title:
             continue
         
-        # 1. Check for pre-resolved UPC in notes
+        # Parse notes for UPC and quantity
+        from . import tasklist as tl
         notes = item.get("notes", "")
-        pinned_upc = _parse_upc_from_notes(notes)
+        notes_data = tl.parse_notes(notes)
+        qty = notes_data["qty"]
+        pinned_upc = notes_data["upc"]
         if pinned_upc:
             cat_item = catalog.get_by_upc(pinned_upc)
             name = cat_item["name"] if cat_item else title
             resolved.append({
                 "upc": pinned_upc,
                 "name": name,
-                "quantity": 1,
+                "quantity": qty,
                 "source": "pinned",
                 "score": 100,
                 "purchaseCount": cat_item.get("purchaseCount", 0) if cat_item else 0,
@@ -159,7 +170,7 @@ def _resolve_list_items(items):
             resolved.append({
                 "upc": match["upc"],
                 "name": match["name"],
-                "quantity": 1,
+                "quantity": qty,
                 "source": "catalog",
                 "score": match["_score"],
                 "purchaseCount": match.get("purchaseCount", 0),
@@ -174,7 +185,7 @@ def _resolve_list_items(items):
                     resolved.append({
                         "upc": top["upc"],
                         "name": top.get("description", title),
-                        "quantity": 1,
+                        "quantity": qty,
                         "source": "api",
                         "score": None,
                         "purchaseCount": 0,
@@ -207,14 +218,15 @@ def cmd_cart(args):
             print(f"-- Dry Run — {total} items to sync:\n")
             for r in resolved:
                 score_str = f"{r['score']}%" if r['score'] is not None else "N/A"
+                qty_str = f" x{r['quantity']}" if r['quantity'] > 1 else ""
                 if r['source'] == 'pinned':
-                    print(f"  * {r['original']} -> {r['name']} (UPC: {r['upc']})")
+                    print(f"  * {r['original']}{qty_str} -> {r['name']} (UPC: {r['upc']})")
                     print(f"    Source: pinned (pre-resolved) | Purchased: {r['purchaseCount']}x")
                 elif r['source'] == 'catalog':
-                    print(f"  + {r['original']} -> {r['name']} (UPC: {r['upc']})")
+                    print(f"  + {r['original']}{qty_str} -> {r['name']} (UPC: {r['upc']})")
                     print(f"    Score: {score_str} | Source: catalog | Purchased: {r['purchaseCount']}x")
                 else:
-                    print(f"  ! {r['original']} -> {r['name']} (UPC: {r['upc']})")
+                    print(f"  ! {r['original']}{qty_str} -> {r['name']} (UPC: {r['upc']})")
                     print(f"    Score: {score_str} | Source: api (not in catalog)")
             for name in unresolved:
                 print(f"  x {name} -> No match found")
@@ -377,6 +389,7 @@ def main():
     add_p.add_argument("items", nargs="+")
     add_p.add_argument("--upc", dest="upcs", action="append", metavar="ITEM=UPC",
                        help="Attach UPC to item: 'Item Name=0001234567890' (repeatable)")
+    add_p.add_argument("--qty", type=int, default=1, help="Quantity (default 1)")
 
     rm_p = list_sub.add_parser("remove", help="Remove an item")
     rm_p.add_argument("item")
